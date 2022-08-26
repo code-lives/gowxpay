@@ -2,7 +2,7 @@
 微信小程序支付（进行中）
 # 安装
 ```
-go get go get github.com/code-lives/gowxpay
+go get github.com/code-lives/gowxpay
 ```
 
 # 自定义 env.ini 配置文件 例如如（env/pay.ini）
@@ -36,7 +36,6 @@ func Pay() *wx.Config {
 # main.go 全局加载
 ```
 pay.PayInit()
-
 ```
 # 支付 记得(import pay/pay.go文件)
 ```
@@ -46,7 +45,6 @@ pay.PayInit()
   panic(err)
  }
  fmt.Println(data)
-
 ```
 # Openid 记得(import pay/pay.go文件)
 ```
@@ -56,5 +54,4 @@ pay.PayInit()
   panic(err)
  }
  fmt.Println(data)
-
 ```
