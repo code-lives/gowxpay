@@ -22,9 +22,7 @@ var (
 )
 
 func Init(s string, p string) *Config {
-
 	autoloading.GetEnv(s, p, &config)
-	fmt.Println(config)
 	if config.Appid == "" || config.Secret == "" {
 		panic("Appid Is Null Or Appid Is Null")
 	}
