@@ -55,3 +55,13 @@ pay.PayInit()
  }
  fmt.Println(data)
 ```
+
+# 订单查询 (import pay/pay.go文件)
+```
+data, err := pay.FindOrder("订单号")
+if err != nil {
+    panic(err)
+}
+fmt.Println("data", data.IsSubscribe)
+```
+

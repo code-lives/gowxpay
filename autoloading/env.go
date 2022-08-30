@@ -1,8 +1,9 @@
 package autoloading
 
 import (
-	"gopkg.in/ini.v1"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 var err error

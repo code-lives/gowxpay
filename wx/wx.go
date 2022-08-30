@@ -17,13 +17,14 @@ import (
 var (
 	config     = &Config{}
 	OrderParam interface{}
-	Order      = make(map[string]interface{})
+	Order      = make(map[string]string)
 	err        error
 )
 
 func Init(s string, p string) *Config {
 
 	autoloading.GetEnv(s, p, &config)
+	fmt.Println(config)
 	if config.Appid == "" || config.Secret == "" {
 		panic("Appid Is Null Or Appid Is Null")
 	}
@@ -31,11 +32,11 @@ func Init(s string, p string) *Config {
 }
 
 // GetOrderParam 设置订单
-func (w *Config) GetOrderParam(o string, m int32, d string, openid string) (interface{}, error) {
+func (w *Config) GetOrderParam(o string, m string, d string, openid string) (*PayOrder, error) {
 	Order["appid"] = w.Appid
 	Order["mch_id"] = w.MchId
 	Order["trade_type"] = w.TradeType
-	Order["nonce_str"] = nonceStr()
+	Order["nonce_str"] = NonceStr()
 	Order["body"] = d
 	Order["out_trade_no"] = o
 	Order["total_fee"] = m
@@ -48,37 +49,46 @@ func (w *Config) GetOrderParam(o string, m int32, d string, openid string) (inte
 	data := MapXml(Order)
 	xmls := common.HttpPost(PayUrl, "POST", "application/xml", data)
 	x := ReturnData{}
+	Pay := &PayOrder{}
 	if err = xml.Unmarshal([]byte(xmls), &x); err != nil {
-		return nil, fmt.Errorf("err %s", err.Error())
+		return Pay, fmt.Errorf("err %s", err.Error())
 	}
-	u, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("err %s", err.Error())
-	}
-	if w.TradeType == "MWEB" {
-		return string(u), nil
-	}
-	var Xcx = make(map[string]interface{})
+	var Xcx = make(map[string]string)
 	Xcx["appId"] = w.Appid
 	Xcx["timeStamp"] = fmt.Sprintf("%d", time.Now().Unix())
-	Xcx["nonceStr"] = nonceStr()
+	Xcx["nonceStr"] = NonceStr()
 	Xcx["package"] = "prepay_id=" + x.PrepayId
 	Xcx["signType"] = "MD5"
 	Xcx["paySign"] = sign(Xcx)
-	pay, err := json.Marshal(Xcx)
-	if err != nil {
-		return nil, fmt.Errorf("err %s", err.Error())
-	}
-	return string(pay), nil
+	Pay.AppId = w.Appid
+	Pay.TimeStamp = Xcx["timeStamp"]
+	Pay.NonceStr = Xcx["nonceStr"]
+	Pay.Package = Xcx["package"]
+	Pay.SignType = Xcx["signType"]
+	Pay.PaySign = Xcx["paySign"]
+	return Pay, nil
 }
-func (w *Config) GetOpenid(c string) *Openid {
+func (w *Config) GetOpenid(c string) (interface{}, error) {
 	openidString := common.HttpGet(CodedUrl + "appid=" + w.Appid + "&secret=" + w.Secret + "&js_code=" + c + "&grant_type=authorization_code")
 	openid := &Openid{}
-	err = json.Unmarshal([]byte(openidString), openid)
-	if err != nil {
-		panic(err)
+	if err = json.Unmarshal([]byte(openidString), openid); err != nil {
+		return nil, fmt.Errorf("err %s", err.Error())
 	}
-	return openid
+	return openid, nil
+}
+func (w *Config) FindOrder(o string) (*FindData, error) {
+	Order["out_trade_no"] = o
+	Order["appid"] = w.Appid
+	Order["mch_id"] = w.MchId
+	Order["nonce_str"] = NonceStr()
+	Order["sign"] = sign(Order)
+	data := MapXml(Order)
+	xmls := common.HttpPost(Query, "POST", "application/xml", data)
+	x := &FindData{}
+	if err = xml.Unmarshal([]byte(xmls), x); err != nil {
+		return x, fmt.Errorf("err %s", err.Error())
+	}
+	return x, nil
 }
 func GetRemoteClientIp() string {
 	adders, err := net.InterfaceAddrs()
@@ -94,7 +104,7 @@ func GetRemoteClientIp() string {
 	}
 	return "127.0.0.1"
 }
-func nonceStr() string {
+func NonceStr() string {
 	chars := "abcdefghijklmnopqrstuvwxyz0123456789"
 	bytes := []byte(chars)
 	var result []byte
@@ -106,13 +116,13 @@ func nonceStr() string {
 }
 
 //签名
-func sign(o map[string]interface{}) string {
-	joinString := formatBizQueryParaMap(o)
+func sign(o map[string]string) string {
+	joinString := FormatBizQueryParaMap(o)
 	return strings.ToUpper(common.Setmd5(joinString + "&key=" + config.MchKey))
 }
 
 // MapXml Map转换为XML
-func MapXml(o map[string]interface{}) string {
+func MapXml(o map[string]string) string {
 	keys := make([]string, 0, len(o))
 	for k := range o {
 		keys = append(keys, k)
@@ -127,7 +137,7 @@ func MapXml(o map[string]interface{}) string {
 }
 
 // 转换成字符串
-func formatBizQueryParaMap(o map[string]interface{}) string {
+func FormatBizQueryParaMap(o map[string]string) string {
 	keys := make([]string, 0, len(o))
 	for k := range o {
 		keys = append(keys, k)
